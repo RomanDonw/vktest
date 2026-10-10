@@ -10,6 +10,7 @@ find_package(glfw3 3.3 REQUIRED)
 
 add_library(glad OBJECT "external/glad/src/vulkan.c")
 target_include_directories(glad PUBLIC "external/glad/include/")
+target_compile_definitions(glad PRIVATE "VK_USE_PLATFORM_WAYLAND_KHR")
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.h" "src/*.c")
 add_executable(vktest ${SOURCES})

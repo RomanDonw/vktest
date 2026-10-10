@@ -29,6 +29,10 @@ int GLAD_VK_VERSION_1_2 = 0;
 int GLAD_VK_VERSION_1_3 = 0;
 int GLAD_VK_VERSION_1_4 = 0;
 int GLAD_VK_KHR_surface = 0;
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+int GLAD_VK_KHR_wayland_surface = 0;
+
+#endif
 
 
 
@@ -157,6 +161,10 @@ PFN_vkCreateSampler glad_vkCreateSampler = NULL;
 PFN_vkCreateSamplerYcbcrConversion glad_vkCreateSamplerYcbcrConversion = NULL;
 PFN_vkCreateSemaphore glad_vkCreateSemaphore = NULL;
 PFN_vkCreateShaderModule glad_vkCreateShaderModule = NULL;
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+PFN_vkCreateWaylandSurfaceKHR glad_vkCreateWaylandSurfaceKHR = NULL;
+
+#endif
 PFN_vkDestroyBuffer glad_vkDestroyBuffer = NULL;
 PFN_vkDestroyBufferView glad_vkDestroyBufferView = NULL;
 PFN_vkDestroyCommandPool glad_vkDestroyCommandPool = NULL;
@@ -240,6 +248,10 @@ PFN_vkGetPhysicalDeviceSurfaceFormatsKHR glad_vkGetPhysicalDeviceSurfaceFormatsK
 PFN_vkGetPhysicalDeviceSurfacePresentModesKHR glad_vkGetPhysicalDeviceSurfacePresentModesKHR = NULL;
 PFN_vkGetPhysicalDeviceSurfaceSupportKHR glad_vkGetPhysicalDeviceSurfaceSupportKHR = NULL;
 PFN_vkGetPhysicalDeviceToolProperties glad_vkGetPhysicalDeviceToolProperties = NULL;
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR glad_vkGetPhysicalDeviceWaylandPresentationSupportKHR = NULL;
+
+#endif
 PFN_vkGetPipelineCacheData glad_vkGetPipelineCacheData = NULL;
 PFN_vkGetPrivateData glad_vkGetPrivateData = NULL;
 PFN_vkGetQueryPoolResults glad_vkGetQueryPoolResults = NULL;
@@ -530,6 +542,14 @@ static void glad_vk_load_VK_KHR_surface( GLADuserptrloadfunc load, void* userptr
     glad_vkGetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) load(userptr, "vkGetPhysicalDeviceSurfacePresentModesKHR");
     glad_vkGetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) load(userptr, "vkGetPhysicalDeviceSurfaceSupportKHR");
 }
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+static void glad_vk_load_VK_KHR_wayland_surface( GLADuserptrloadfunc load, void* userptr) {
+    if(!GLAD_VK_KHR_wayland_surface) return;
+    glad_vkCreateWaylandSurfaceKHR = (PFN_vkCreateWaylandSurfaceKHR) load(userptr, "vkCreateWaylandSurfaceKHR");
+    glad_vkGetPhysicalDeviceWaylandPresentationSupportKHR = (PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR) load(userptr, "vkGetPhysicalDeviceWaylandPresentationSupportKHR");
+}
+
+#endif
 
 
 
@@ -661,6 +681,10 @@ static int glad_vk_find_extensions_vulkan( VkPhysicalDevice physical_device) {
     if (!glad_vk_get_extensions(physical_device, &extension_count, &extensions)) return 0;
 
     GLAD_VK_KHR_surface = glad_vk_has_extension("VK_KHR_surface", extension_count, extensions);
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    GLAD_VK_KHR_wayland_surface = glad_vk_has_extension("VK_KHR_wayland_surface", extension_count, extensions);
+
+#endif
 
     GLAD_UNUSED(&glad_vk_has_extension);
 
@@ -722,6 +746,10 @@ int gladLoadVulkanUserPtr( VkPhysicalDevice physical_device, GLADuserptrloadfunc
 
     if (!glad_vk_find_extensions_vulkan( physical_device)) return 0;
     glad_vk_load_VK_KHR_surface(load, userptr);
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    glad_vk_load_VK_KHR_wayland_surface(load, userptr);
+
+#endif
 
 
     return version;
