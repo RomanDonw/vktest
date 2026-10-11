@@ -38,8 +38,7 @@ int main(void)
     GLFWwindow *w;
     if (!(w = glfwCreateWindow(800, 600, "Vulkan Test", NULL, NULL))) ABRT();
 
-    static const char *exts[] = {"VK_KHR_wayland_surface", "VK_KHR_surface"};
-    static const VkInstanceCreateInfo instancecreateinfo =
+    VkInstanceCreateInfo instancecreateinfo =
     {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
@@ -48,11 +47,13 @@ int main(void)
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = NULL,
 
-        .enabledExtensionCount = sizeof(exts) / sizeof(const char *),
-        .ppEnabledExtensionNames = exts, //glfwGetRequiredInstanceExtensions()
+        //.enabledExtensionCount = sizeof(exts) / sizeof(const char *),
+        //.ppEnabledExtensionNames = exts, //glfwGetRequiredInstanceExtensions()
 
         .flags = 0
     };
+    instancecreateinfo.ppEnabledExtensionNames = glfwGetRequiredInstanceExtensions(&instancecreateinfo.enabledExtensionCount);
+
     VkInstance instance;
     if (vkCreateInstance(&instancecreateinfo, NULL, &instance) != VK_SUCCESS) ABRT();
     if (!gladLoadVulkanUserPtr(NULL, (void *)glfwGetInstanceProcAddress, instance)) ABRT();
@@ -121,7 +122,7 @@ int main(void)
         printf("Select prefer physical device: ");
         uint32_t physdevidx;
         scanf("%u", &physdevidx);
-        if (physdevidx >= physdevscount) { puts("Specified index out of physical devices array bounds."); free(physdevs); goto errorquit_selectphysdev; }
+        if (physdevidx >= physdevscount) { puts("Specified index out of physical devices array bounds."); free(physdevs); goto errorquit_afterselphysdev; }
         printf("Selected physical device index #%u.\n", physdevidx);
 
         physdev = physdevs[physdevidx];
@@ -130,6 +131,7 @@ int main(void)
 
     putchar('\n');
 
+    uint32_t qfamindex/*, qcount*/;
     {
         uint32_t qfamscount;
         vkGetPhysicalDeviceQueueFamilyProperties(physdev, &qfamscount, NULL);
@@ -139,6 +141,7 @@ int main(void)
         VkQueueFamilyProperties *qfamprops = malloc_s(qfamscount * sizeof(VkQueueFamilyProperties));
         vkGetPhysicalDeviceQueueFamilyProperties(physdev, &qfamscount, qfamprops);
 
+        int64_t idx = -1;
         for (uint32_t i = 0; i < qfamscount; i++)
         {
             VkQueueFamilyProperties qfam = qfamprops[i];
@@ -150,12 +153,64 @@ int main(void)
             if (qfam.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) puts("     -  Sparse binding.");
             if (qfam.queueFlags & VK_QUEUE_PROTECTED_BIT) puts("     -  Protected.");
 
+            if (idx < 0 && (qfam.queueFlags & VK_QUEUE_GRAPHICS_BIT) && (qfam.queueFlags & VK_QUEUE_COMPUTE_BIT))
+            {
+                idx = i;
+                //qcount = qfam.queueCount;
+            }
+
             putchar('\n');
         }
 
         free(qfamprops);
+
+        if (idx < 0) { puts("There's no queue family with support of graphics & computing."); goto errorquit_afterselphysdev; }
+        qfamindex = (uint32_t)idx;
+        printf("Selected queue family index #%u.\n", qfamindex);
     }
+
+    if (!glfwGetPhysicalDevicePresentationSupport(instance, physdev, qfamindex))
+    { puts("Specified device & queue family doesn't support presentation."); goto errorquit_afterselphysdev; }
     
+    float qpriority = 1;
+    VkDeviceQueueCreateInfo queuecrinfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .pNext = NULL,
+        .flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
+
+        .queueCount = 1,
+        .queueFamilyIndex = qfamindex,
+        .pQueuePriorities = &qpriority
+    };
+    VkDeviceCreateInfo devcrinfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = NULL,
+        .flags = 0,
+
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = NULL,
+
+        .pEnabledFeatures = NULL,
+
+        .queueCreateInfoCount = 1,
+        .pQueueCreateInfos = &queuecrinfo,
+        
+        .enabledExtensionCount = 0,
+        .ppEnabledExtensionNames = NULL
+        //.enabledExtensionCount = sizeof(exts) / sizeof(const char *),
+        //.ppEnabledExtensionNames = exts //glfwGetRequiredInstanceExtensions()
+    };
+    VkDevice dev;
+    if (vkCreateDevice(physdev, &devcrinfo, NULL, &dev) != VK_SUCCESS) ABRT();
+    
+
+    VkQueue q;
+    vkGetDeviceQueue(dev, qfamindex, 0, &q);
+    
+    //vkBeginCommandBuffer()
+
     /*
     VkPhysicalDevice physdev;
     if (vkEnumeratePhysicalDevices(instance, 1, &physdev) != VK_SUCCESS) ABRT();
@@ -187,11 +242,14 @@ int main(void)
     }
     */
 
+    vkDestroyDevice(dev, NULL);
     vkDestroyInstance(instance, NULL);
     glfwTerminate();
     return 0;
 
-    errorquit_selectphysdev:
+    errorquit_aftercrdev:
+        vkDestroyDevice(dev, NULL);
+    errorquit_afterselphysdev:
         vkDestroyInstance(instance, NULL);
         glfwTerminate();
     return 1;
