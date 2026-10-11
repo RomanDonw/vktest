@@ -29,13 +29,12 @@ int GLAD_VK_VERSION_1_2 = 0;
 int GLAD_VK_VERSION_1_3 = 0;
 int GLAD_VK_VERSION_1_4 = 0;
 int GLAD_VK_KHR_surface = 0;
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-int GLAD_VK_KHR_wayland_surface = 0;
-
-#endif
+int GLAD_VK_KHR_swapchain = 0;
 
 
 
+PFN_vkAcquireNextImage2KHR glad_vkAcquireNextImage2KHR = NULL;
+PFN_vkAcquireNextImageKHR glad_vkAcquireNextImageKHR = NULL;
 PFN_vkAllocateCommandBuffers glad_vkAllocateCommandBuffers = NULL;
 PFN_vkAllocateDescriptorSets glad_vkAllocateDescriptorSets = NULL;
 PFN_vkAllocateMemory glad_vkAllocateMemory = NULL;
@@ -161,10 +160,7 @@ PFN_vkCreateSampler glad_vkCreateSampler = NULL;
 PFN_vkCreateSamplerYcbcrConversion glad_vkCreateSamplerYcbcrConversion = NULL;
 PFN_vkCreateSemaphore glad_vkCreateSemaphore = NULL;
 PFN_vkCreateShaderModule glad_vkCreateShaderModule = NULL;
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-PFN_vkCreateWaylandSurfaceKHR glad_vkCreateWaylandSurfaceKHR = NULL;
-
-#endif
+PFN_vkCreateSwapchainKHR glad_vkCreateSwapchainKHR = NULL;
 PFN_vkDestroyBuffer glad_vkDestroyBuffer = NULL;
 PFN_vkDestroyBufferView glad_vkDestroyBufferView = NULL;
 PFN_vkDestroyCommandPool glad_vkDestroyCommandPool = NULL;
@@ -189,6 +185,7 @@ PFN_vkDestroySamplerYcbcrConversion glad_vkDestroySamplerYcbcrConversion = NULL;
 PFN_vkDestroySemaphore glad_vkDestroySemaphore = NULL;
 PFN_vkDestroyShaderModule glad_vkDestroyShaderModule = NULL;
 PFN_vkDestroySurfaceKHR glad_vkDestroySurfaceKHR = NULL;
+PFN_vkDestroySwapchainKHR glad_vkDestroySwapchainKHR = NULL;
 PFN_vkDeviceWaitIdle glad_vkDeviceWaitIdle = NULL;
 PFN_vkEndCommandBuffer glad_vkEndCommandBuffer = NULL;
 PFN_vkEnumerateDeviceExtensionProperties glad_vkEnumerateDeviceExtensionProperties = NULL;
@@ -209,6 +206,8 @@ PFN_vkGetBufferOpaqueCaptureAddress glad_vkGetBufferOpaqueCaptureAddress = NULL;
 PFN_vkGetDescriptorSetLayoutSupport glad_vkGetDescriptorSetLayoutSupport = NULL;
 PFN_vkGetDeviceBufferMemoryRequirements glad_vkGetDeviceBufferMemoryRequirements = NULL;
 PFN_vkGetDeviceGroupPeerMemoryFeatures glad_vkGetDeviceGroupPeerMemoryFeatures = NULL;
+PFN_vkGetDeviceGroupPresentCapabilitiesKHR glad_vkGetDeviceGroupPresentCapabilitiesKHR = NULL;
+PFN_vkGetDeviceGroupSurfacePresentModesKHR glad_vkGetDeviceGroupSurfacePresentModesKHR = NULL;
 PFN_vkGetDeviceImageMemoryRequirements glad_vkGetDeviceImageMemoryRequirements = NULL;
 PFN_vkGetDeviceImageSparseMemoryRequirements glad_vkGetDeviceImageSparseMemoryRequirements = NULL;
 PFN_vkGetDeviceImageSubresourceLayout glad_vkGetDeviceImageSubresourceLayout = NULL;
@@ -237,6 +236,7 @@ PFN_vkGetPhysicalDeviceImageFormatProperties glad_vkGetPhysicalDeviceImageFormat
 PFN_vkGetPhysicalDeviceImageFormatProperties2 glad_vkGetPhysicalDeviceImageFormatProperties2 = NULL;
 PFN_vkGetPhysicalDeviceMemoryProperties glad_vkGetPhysicalDeviceMemoryProperties = NULL;
 PFN_vkGetPhysicalDeviceMemoryProperties2 glad_vkGetPhysicalDeviceMemoryProperties2 = NULL;
+PFN_vkGetPhysicalDevicePresentRectanglesKHR glad_vkGetPhysicalDevicePresentRectanglesKHR = NULL;
 PFN_vkGetPhysicalDeviceProperties glad_vkGetPhysicalDeviceProperties = NULL;
 PFN_vkGetPhysicalDeviceProperties2 glad_vkGetPhysicalDeviceProperties2 = NULL;
 PFN_vkGetPhysicalDeviceQueueFamilyProperties glad_vkGetPhysicalDeviceQueueFamilyProperties = NULL;
@@ -248,21 +248,19 @@ PFN_vkGetPhysicalDeviceSurfaceFormatsKHR glad_vkGetPhysicalDeviceSurfaceFormatsK
 PFN_vkGetPhysicalDeviceSurfacePresentModesKHR glad_vkGetPhysicalDeviceSurfacePresentModesKHR = NULL;
 PFN_vkGetPhysicalDeviceSurfaceSupportKHR glad_vkGetPhysicalDeviceSurfaceSupportKHR = NULL;
 PFN_vkGetPhysicalDeviceToolProperties glad_vkGetPhysicalDeviceToolProperties = NULL;
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR glad_vkGetPhysicalDeviceWaylandPresentationSupportKHR = NULL;
-
-#endif
 PFN_vkGetPipelineCacheData glad_vkGetPipelineCacheData = NULL;
 PFN_vkGetPrivateData glad_vkGetPrivateData = NULL;
 PFN_vkGetQueryPoolResults glad_vkGetQueryPoolResults = NULL;
 PFN_vkGetRenderAreaGranularity glad_vkGetRenderAreaGranularity = NULL;
 PFN_vkGetRenderingAreaGranularity glad_vkGetRenderingAreaGranularity = NULL;
 PFN_vkGetSemaphoreCounterValue glad_vkGetSemaphoreCounterValue = NULL;
+PFN_vkGetSwapchainImagesKHR glad_vkGetSwapchainImagesKHR = NULL;
 PFN_vkInvalidateMappedMemoryRanges glad_vkInvalidateMappedMemoryRanges = NULL;
 PFN_vkMapMemory glad_vkMapMemory = NULL;
 PFN_vkMapMemory2 glad_vkMapMemory2 = NULL;
 PFN_vkMergePipelineCaches glad_vkMergePipelineCaches = NULL;
 PFN_vkQueueBindSparse glad_vkQueueBindSparse = NULL;
+PFN_vkQueuePresentKHR glad_vkQueuePresentKHR = NULL;
 PFN_vkQueueSubmit glad_vkQueueSubmit = NULL;
 PFN_vkQueueSubmit2 glad_vkQueueSubmit2 = NULL;
 PFN_vkQueueWaitIdle glad_vkQueueWaitIdle = NULL;
@@ -542,14 +540,18 @@ static void glad_vk_load_VK_KHR_surface( GLADuserptrloadfunc load, void* userptr
     glad_vkGetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) load(userptr, "vkGetPhysicalDeviceSurfacePresentModesKHR");
     glad_vkGetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) load(userptr, "vkGetPhysicalDeviceSurfaceSupportKHR");
 }
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-static void glad_vk_load_VK_KHR_wayland_surface( GLADuserptrloadfunc load, void* userptr) {
-    if(!GLAD_VK_KHR_wayland_surface) return;
-    glad_vkCreateWaylandSurfaceKHR = (PFN_vkCreateWaylandSurfaceKHR) load(userptr, "vkCreateWaylandSurfaceKHR");
-    glad_vkGetPhysicalDeviceWaylandPresentationSupportKHR = (PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR) load(userptr, "vkGetPhysicalDeviceWaylandPresentationSupportKHR");
+static void glad_vk_load_VK_KHR_swapchain( GLADuserptrloadfunc load, void* userptr) {
+    if(!GLAD_VK_KHR_swapchain) return;
+    glad_vkAcquireNextImage2KHR = (PFN_vkAcquireNextImage2KHR) load(userptr, "vkAcquireNextImage2KHR");
+    glad_vkAcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) load(userptr, "vkAcquireNextImageKHR");
+    glad_vkCreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) load(userptr, "vkCreateSwapchainKHR");
+    glad_vkDestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) load(userptr, "vkDestroySwapchainKHR");
+    glad_vkGetDeviceGroupPresentCapabilitiesKHR = (PFN_vkGetDeviceGroupPresentCapabilitiesKHR) load(userptr, "vkGetDeviceGroupPresentCapabilitiesKHR");
+    glad_vkGetDeviceGroupSurfacePresentModesKHR = (PFN_vkGetDeviceGroupSurfacePresentModesKHR) load(userptr, "vkGetDeviceGroupSurfacePresentModesKHR");
+    glad_vkGetPhysicalDevicePresentRectanglesKHR = (PFN_vkGetPhysicalDevicePresentRectanglesKHR) load(userptr, "vkGetPhysicalDevicePresentRectanglesKHR");
+    glad_vkGetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) load(userptr, "vkGetSwapchainImagesKHR");
+    glad_vkQueuePresentKHR = (PFN_vkQueuePresentKHR) load(userptr, "vkQueuePresentKHR");
 }
-
-#endif
 
 
 
@@ -681,10 +683,7 @@ static int glad_vk_find_extensions_vulkan( VkPhysicalDevice physical_device) {
     if (!glad_vk_get_extensions(physical_device, &extension_count, &extensions)) return 0;
 
     GLAD_VK_KHR_surface = glad_vk_has_extension("VK_KHR_surface", extension_count, extensions);
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    GLAD_VK_KHR_wayland_surface = glad_vk_has_extension("VK_KHR_wayland_surface", extension_count, extensions);
-
-#endif
+    GLAD_VK_KHR_swapchain = glad_vk_has_extension("VK_KHR_swapchain", extension_count, extensions);
 
     GLAD_UNUSED(&glad_vk_has_extension);
 
@@ -746,10 +745,7 @@ int gladLoadVulkanUserPtr( VkPhysicalDevice physical_device, GLADuserptrloadfunc
 
     if (!glad_vk_find_extensions_vulkan( physical_device)) return 0;
     glad_vk_load_VK_KHR_surface(load, userptr);
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    glad_vk_load_VK_KHR_wayland_surface(load, userptr);
-
-#endif
+    glad_vk_load_VK_KHR_swapchain(load, userptr);
 
 
     return version;
