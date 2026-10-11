@@ -100,6 +100,8 @@ int main(void)
         free(physdevs);
     }
 
+    if (!gladLoadVulkanUserPtr(physdev, (void *)glfwGetInstanceProcAddress, instance)) ABRT();
+
     // =========================================
 
     putchar('\n');
@@ -158,11 +160,14 @@ int main(void)
         .queueFamilyIndex = qfamindex,
         .pQueuePriorities = &qpriority
     };
+    static const char *devexts[] = {"VK_KHR_swapchain"};
     VkDeviceCreateInfo devcrinfo =
     {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queuecrinfo
+        .pQueueCreateInfos = &queuecrinfo,
+        .ppEnabledExtensionNames = devexts,
+        .enabledExtensionCount = sizeof(devexts) / sizeof(const char *)
     };
     VkDevice dev;
     if (vkCreateDevice(physdev, &devcrinfo, NULL, &dev) != VK_SUCCESS) ABRT();
@@ -176,18 +181,153 @@ int main(void)
     GLFWwindow *w;
     if (!(w = glfwCreateWindow(800, 600, "Vulkan Test", NULL, NULL))) ABRT();
 
+    // =========================================
+
     VkSurfaceKHR surface;
     if (glfwCreateWindowSurface(instance, w, NULL, &surface) != VK_SUCCESS)
     { puts("failed creating window surface"); goto errorquit_aftercrdev; }
 
+    VkSurfaceFormatKHR surfacefmt;
+    {
+        uint32_t sfmtcount;
+        if (vkGetPhysicalDeviceSurfaceFormatsKHR(physdev, surface, &sfmtcount, NULL) != VK_SUCCESS)
+        { puts("failed getting count of physical device surface formats"); goto errorquit_aftercrsurface; }
+
+        if (!sfmtcount) { puts("There's no physical device surface formats"); goto errorquit_aftercrsurface; }
+
+        printf("Physical device surface formats count: %u.\n", sfmtcount);
+
+        VkSurfaceFormatKHR *fmts = malloc_s(sfmtcount * sizeof(VkSurfaceFormatKHR));
+        if (vkGetPhysicalDeviceSurfaceFormatsKHR(physdev, surface, &sfmtcount, fmts) != VK_SUCCESS)
+        { puts("failed getting physical device surface formats"); goto errorquit_aftercrsurface; }
+
+        for (uint32_t i = 0; i < sfmtcount; i++)
+        {
+            VkSurfaceFormatKHR fmt = fmts[i];
+
+            printf("Physical device surface format index #%u:\n -  Color space: ", i);
+
+            switch (fmt.colorSpace)
+            {
+                case VK_COLOR_SPACE_SRGB_NONLINEAR_KHR:
+                    puts("non-linear SRGB.");
+                    break;
+
+                default:
+                    puts("(unknown)");
+            }
+
+            printf(" -  Format: %llu.\n\n", (unsigned long long)fmt.format);
+        }
+
+        printf("Select prefer physical device surface format: ");
+        uint32_t i;
+        scanf("%u", &i);
+        if (i >= sfmtcount)
+        { puts("Specified index out of physical device surface formats array bounds."); free(fmts); goto errorquit_aftercrsurface; }
+
+        surfacefmt = fmts[i];
+        free(fmts);
+        printf("Selected physical device surface format #%u.\n", i);
+    }
+
     // =========================================
 
+    VkPresentModeKHR presentmode;
+    {
+        uint32_t pmodescount;
+        if (vkGetPhysicalDeviceSurfacePresentModesKHR(physdev, surface, &pmodescount, NULL) != VK_SUCCESS)
+        { puts("failed getting count of physical device surface present modes"); goto errorquit_aftercrsurface; }
+
+        printf("Present modes count: %u.\n", pmodescount);
+
+        VkPresentModeKHR *pmodes = malloc_s(pmodescount * sizeof(VkPresentModeKHR));
+        if (vkGetPhysicalDeviceSurfacePresentModesKHR(physdev, surface, &pmodescount, pmodes) != VK_SUCCESS)
+        { puts("failed getting physical device surface present modes list"); free(pmodes); goto errorquit_aftercrsurface; }
+
+        puts("Present modes:");
+        for (uint32_t i = 0; i < pmodescount; i++)
+        {
+            printf(" [%u]: ", i);
+            switch (pmodes[i])
+            {
+                case VK_PRESENT_MODE_IMMEDIATE_KHR:
+                    puts("Immediate.");
+                    break;
+
+                case VK_PRESENT_MODE_MAILBOX_KHR:
+                    puts("Mailbox.");
+                    break;
+
+                case VK_PRESENT_MODE_FIFO_KHR:
+                    puts("FIFO.");
+                    break;
+
+                case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+                    puts("FIFO relaxed.");
+                    break;
+                
+                default:
+                    puts("(unknown).");
+            }
+        }
+
+        printf("Select prefer present mode: ");
+        uint32_t i;
+        scanf("%u", &i);
+        if (i >= pmodescount)
+        { puts("Specified index out of physical device surface formats array bounds."); free(pmodes); goto errorquit_aftercrsurface; }
+
+        presentmode = pmodes[i];
+        free(pmodes);
+        printf("Selected present mode #%u.\n", i);
+    }
+
+    // =========================================
+
+    VkSurfaceCapabilitiesKHR surfacecapab;
+    if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physdev, surface, &surfacecapab) != VK_SUCCESS)
+    { puts("failed to get physical device surface capabilities"); goto errorquit_aftercrsurface; }
+
+    #if 0
+
+    VkSwapchainCreateInfoKHR swchaincinfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = surface,
+        .imageArrayLayers = 1,
+        .minImageCount = surfacecapab.minImageCount + 1,
+        .imageFormat = surfacefmt.format,
+        .imageColorSpace = surfacefmt.colorSpace,
+        .imageExtent = surfacecapab.currentExtent,
+        .imageArrayLayers = 1,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .preTransform = surfacecapab.currentTransform,
+        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .presentMode = presentmode,
+        .clipped = VK_TRUE,
+        .oldSwapchain = NULL
+    };
+    
+    VkSwapchainKHR swapchain;
+    if (vkCreateSwapchainKHR(dev, &swchaincinfo, NULL, &swapchain) != VK_SUCCESS)
+    { puts("failed creating swapchain"); goto errorquit_aftercrsurface; }
+
+    // =========================================
+
+    vkDestroySwapchainKHR(dev, swapchain, NULL);
+    #endif
     vkDestroySurfaceKHR(instance, surface, NULL);
     vkDestroyDevice(dev, NULL);
     vkDestroyInstance(instance, NULL);
     glfwTerminate();
     return 0;
 
+    errorquit_aftercreateswapchain:
+        //vkDestroySwapchainKHR(dev, swapchain, NULL);
+    errorquit_aftercrsurface:
+        vkDestroySurfaceKHR(instance, surface, NULL);
     errorquit_aftercrdev:
         vkDestroyDevice(dev, NULL);
     errorquit_afterselphysdev:
