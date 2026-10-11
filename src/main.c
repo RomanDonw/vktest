@@ -8,9 +8,7 @@
 #include <glad/vulkan.h>
 
 #define GLFW_INCLUDE_NONE
-#define GLFW_EXPOSE_NATIVE_WAYLAND
 #include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
 
 #include "util.h"
 
@@ -34,43 +32,16 @@ int main(void)
 
     if (!gladLoadVulkanUserPtr(NULL, (void *)glfwGetInstanceProcAddress, NULL)) ABRT();
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow *w;
-    if (!(w = glfwCreateWindow(800, 600, "Vulkan Test", NULL, NULL))) ABRT();
+    // =========================================
 
-    VkInstanceCreateInfo instancecreateinfo =
-    {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pNext = NULL,
-        .pApplicationInfo = NULL,
-
-        .enabledLayerCount = 0,
-        .ppEnabledLayerNames = NULL,
-
-        //.enabledExtensionCount = sizeof(exts) / sizeof(const char *),
-        //.ppEnabledExtensionNames = exts, //glfwGetRequiredInstanceExtensions()
-
-        .flags = 0
-    };
+    VkInstanceCreateInfo instancecreateinfo = { .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     instancecreateinfo.ppEnabledExtensionNames = glfwGetRequiredInstanceExtensions(&instancecreateinfo.enabledExtensionCount);
 
     VkInstance instance;
     if (vkCreateInstance(&instancecreateinfo, NULL, &instance) != VK_SUCCESS) ABRT();
     if (!gladLoadVulkanUserPtr(NULL, (void *)glfwGetInstanceProcAddress, instance)) ABRT();
-    
-    /*
-    VkWaylandSurfaceCreateInfoKHR waylandcreateinfo =
-    {
-        .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
-        .pNext = NULL,
-        .flags = 0,
-    };
-    waylandcreateinfo.display = glfwGetWaylandDisplay();
-    waylandcreateinfo.surface = glfwGetWaylandWindow(w);
-    
-    VkSurfaceKHR surface;
-    if (vkCreateWaylandSurfaceKHR(instance, &waylandcreateinfo, NULL, &surface) != VK_SUCCESS) ABRT();
-    */
+
+    // =========================================
 
     VkPhysicalDevice physdev;
     {
@@ -129,9 +100,13 @@ int main(void)
         free(physdevs);
     }
 
+    // =========================================
+
     putchar('\n');
 
-    uint32_t qfamindex/*, qcount*/;
+    // =========================================
+
+    uint32_t qfamindex;
     {
         uint32_t qfamscount;
         vkGetPhysicalDeviceQueueFamilyProperties(physdev, &qfamscount, NULL);
@@ -153,11 +128,7 @@ int main(void)
             if (qfam.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) puts("     -  Sparse binding.");
             if (qfam.queueFlags & VK_QUEUE_PROTECTED_BIT) puts("     -  Protected.");
 
-            if (idx < 0 && (qfam.queueFlags & VK_QUEUE_GRAPHICS_BIT) && (qfam.queueFlags & VK_QUEUE_COMPUTE_BIT))
-            {
-                idx = i;
-                //qcount = qfam.queueCount;
-            }
+            if (idx < 0 && (qfam.queueFlags & VK_QUEUE_GRAPHICS_BIT) && (qfam.queueFlags & VK_QUEUE_COMPUTE_BIT)) idx = i;
 
             putchar('\n');
         }
@@ -169,8 +140,12 @@ int main(void)
         printf("Selected queue family index #%u.\n", qfamindex);
     }
 
+    // =========================================
+
     if (!glfwGetPhysicalDevicePresentationSupport(instance, physdev, qfamindex))
     { puts("Specified device & queue family doesn't support presentation."); goto errorquit_afterselphysdev; }
+
+    // =========================================
     
     float qpriority = 1;
     VkDeviceQueueCreateInfo queuecrinfo =
@@ -186,61 +161,22 @@ int main(void)
     VkDeviceCreateInfo devcrinfo =
     {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = NULL,
-        .flags = 0,
-
-        .enabledLayerCount = 0,
-        .ppEnabledLayerNames = NULL,
-
-        .pEnabledFeatures = NULL,
-
         .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queuecrinfo,
-        
-        .enabledExtensionCount = 0,
-        .ppEnabledExtensionNames = NULL
-        //.enabledExtensionCount = sizeof(exts) / sizeof(const char *),
-        //.ppEnabledExtensionNames = exts //glfwGetRequiredInstanceExtensions()
+        .pQueueCreateInfos = &queuecrinfo
     };
     VkDevice dev;
     if (vkCreateDevice(physdev, &devcrinfo, NULL, &dev) != VK_SUCCESS) ABRT();
-    
 
     VkQueue q;
     vkGetDeviceQueue(dev, qfamindex, 0, &q);
-    
-    //vkBeginCommandBuffer()
 
-    /*
-    VkPhysicalDevice physdev;
-    if (vkEnumeratePhysicalDevices(instance, 1, &physdev) != VK_SUCCESS) ABRT();
+    // =========================================
 
-    VkDeviceCreateInfo devcrinfo =
-    {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .flags = 0,
-        .pNext = NULL,
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    GLFWwindow *w;
+    if (!(w = glfwCreateWindow(800, 600, "Vulkan Test", NULL, NULL))) ABRT();
 
-        .enabledExtensionCount = 0,
-        .enabledLayerCount = 0,
-        .pEnabledFeatures
-    }
-    vkCreateDevice(physdev, )
-
-    vkGetDeviceQueue()
-
-    glfwGetPhysicalDevicePresentationSupport(instance, physdev, VK_QUEUE_)
-    */
-
-    /*
-    VkSurfaceKHR surface;
-    if (glfwCreateWindowSurface(instance, w, NULL, &surface) != VK_SUCCESS) ABRT();
-
-    while (!glfwWindowShouldClose(w))
-    {
-        glfwPollEvents();
-    }
-    */
+    // =========================================
 
     vkDestroyDevice(dev, NULL);
     vkDestroyInstance(instance, NULL);
