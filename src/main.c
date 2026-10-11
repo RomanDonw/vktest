@@ -176,8 +176,13 @@ int main(void)
     GLFWwindow *w;
     if (!(w = glfwCreateWindow(800, 600, "Vulkan Test", NULL, NULL))) ABRT();
 
+    VkSurfaceKHR surface;
+    if (glfwCreateWindowSurface(instance, w, NULL, &surface) != VK_SUCCESS)
+    { puts("failed creating window surface"); goto errorquit_aftercrdev; }
+
     // =========================================
 
+    vkDestroySurfaceKHR(instance, surface, NULL);
     vkDestroyDevice(dev, NULL);
     vkDestroyInstance(instance, NULL);
     glfwTerminate();
