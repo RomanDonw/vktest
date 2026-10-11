@@ -289,8 +289,6 @@ int main(void)
     if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physdev, surface, &surfacecapab) != VK_SUCCESS)
     { puts("failed to get physical device surface capabilities"); goto errorquit_aftercrsurface; }
 
-    #if 0
-
     VkSwapchainCreateInfoKHR swchaincinfo =
     {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -317,7 +315,6 @@ int main(void)
     // =========================================
 
     vkDestroySwapchainKHR(dev, swapchain, NULL);
-    #endif
     vkDestroySurfaceKHR(instance, surface, NULL);
     vkDestroyDevice(dev, NULL);
     vkDestroyInstance(instance, NULL);
@@ -325,7 +322,7 @@ int main(void)
     return 0;
 
     errorquit_aftercreateswapchain:
-        //vkDestroySwapchainKHR(dev, swapchain, NULL);
+        vkDestroySwapchainKHR(dev, swapchain, NULL);
     errorquit_aftercrsurface:
         vkDestroySurfaceKHR(instance, surface, NULL);
     errorquit_aftercrdev:
