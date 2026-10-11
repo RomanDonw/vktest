@@ -12,6 +12,8 @@
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
+#include "util.h"
+
 #define __TOSTRHLP(x) #x
 #define TOSTR(x) __TOSTRHLP(x)
 #define ABRT() { puts("\n\naborted at " TOSTR(__LINE__) ":" __FILE__); abort(); }
@@ -69,53 +71,91 @@ int main(void)
     if (vkCreateWaylandSurfaceKHR(instance, &waylandcreateinfo, NULL, &surface) != VK_SUCCESS) ABRT();
     */
 
-    uint32_t physdevscount;
-    if (vkEnumeratePhysicalDevices(instance, &physdevscount, NULL) != VK_SUCCESS) ABRT();
-    printf("Physical devices count: %u.\n", physdevscount);
-    if (!physdevscount) { puts("there's no physical devices. uh?"); ABRT(); }
-    
-    VkPhysicalDevice *physdevs = malloc(physdevscount * sizeof(VkPhysicalDevice));
-    if (!physdevs) { puts("memory allocation failed"); ABRT(); }
-    if (vkEnumeratePhysicalDevices(instance, &physdevscount, physdevs) != VK_SUCCESS) ABRT();
-    for (uint32_t i = 0; i < physdevscount; i++)
+    VkPhysicalDevice physdev;
     {
-        VkPhysicalDevice physdev = physdevs[i];
+        uint32_t physdevscount;
+        if (vkEnumeratePhysicalDevices(instance, &physdevscount, NULL) != VK_SUCCESS) ABRT();
+        printf("Physical devices count: %u.\n", physdevscount);
+        if (!physdevscount) { puts("there's no physical devices. uh?"); ABRT(); }
+        
+        VkPhysicalDevice *physdevs = malloc_s(physdevscount * sizeof(VkPhysicalDevice));
+        if (vkEnumeratePhysicalDevices(instance, &physdevscount, physdevs) != VK_SUCCESS) { free(physdevs); ABRT(); }
 
-        VkPhysicalDeviceProperties props;
-        vkGetPhysicalDeviceProperties(physdev, &props);
-
-        printf("Physical device index #%u:\n -  ID: %u.\n -  Name: \"%s\".\n -  Type: ", i, props.deviceID, props.deviceName);
-        switch (props.deviceType)
+        for (uint32_t i = 0; i < physdevscount; i++)
         {
-            case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-                puts("other.");
-                break;
+            VkPhysicalDevice physdev = physdevs[i];
 
-            case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-                puts("integrated GPU.");
-                break;
+            VkPhysicalDeviceProperties props;
+            vkGetPhysicalDeviceProperties(physdev, &props);
 
-            case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-                puts("discrete GPU.");
-                break;
+            printf("Physical device index #%u:\n -  ID: %u.\n -  Name: \"%s\".\n -  Type: ", i, props.deviceID, props.deviceName);
+            switch (props.deviceType)
+            {
+                case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+                    puts("other.");
+                    break;
 
-            case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-                puts("virtual GPU.");
-                break;
+                case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+                    puts("integrated GPU.");
+                    break;
 
-            case VK_PHYSICAL_DEVICE_TYPE_CPU:
-                puts("CPU.");
-                break;
+                case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+                    puts("discrete GPU.");
+                    break;
 
-            default:
-                puts("(unknown).");
+                case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+                    puts("virtual GPU.");
+                    break;
+
+                case VK_PHYSICAL_DEVICE_TYPE_CPU:
+                    puts("CPU.");
+                    break;
+
+                default:
+                    puts("(unknown).");
+            }
+
+            printf(" -  API version: %u.\n -  Driver version: %u.\n -  Vendor ID: %u.\n\n", props.apiVersion, props.driverVersion, props.vendorID);
         }
 
-        printf(" -  API version: %u.\n -  Driver version: %u.\n -  Vendor ID: %u.\n\n", props.apiVersion, props.driverVersion, props.vendorID);
+        printf("Select prefer physical device: ");
+        uint32_t physdevidx;
+        scanf("%u", &physdevidx);
+        if (physdevidx >= physdevscount) { puts("Specified index out of physical devices array bounds."); free(physdevs); goto errorquit_selectphysdev; }
+        printf("Selected physical device index #%u.\n", physdevidx);
+
+        physdev = physdevs[physdevidx];
+        free(physdevs);
     }
 
-    free(physdevs);
+    putchar('\n');
 
+    {
+        uint32_t qfamscount;
+        vkGetPhysicalDeviceQueueFamilyProperties(physdev, &qfamscount, NULL);
+        printf("Query families count: %u.\n", qfamscount);
+        if (!qfamscount) ABRT();
+
+        VkQueueFamilyProperties *qfamprops = malloc_s(qfamscount * sizeof(VkQueueFamilyProperties));
+        vkGetPhysicalDeviceQueueFamilyProperties(physdev, &qfamscount, qfamprops);
+
+        for (uint32_t i = 0; i < qfamscount; i++)
+        {
+            VkQueueFamilyProperties qfam = qfamprops[i];
+            printf("Queue family index #%u:\n -  Queue count: %u.\n -  Queue flags:\n", i, qfam.queueCount);
+
+            if (qfam.queueFlags & VK_QUEUE_GRAPHICS_BIT) puts("     -  Graphics.");
+            if (qfam.queueFlags & VK_QUEUE_COMPUTE_BIT) puts("     -  Compute.");
+            if (qfam.queueFlags & VK_QUEUE_TRANSFER_BIT) puts("     -  Transfer.");
+            if (qfam.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) puts("     -  Sparse binding.");
+            if (qfam.queueFlags & VK_QUEUE_PROTECTED_BIT) puts("     -  Protected.");
+
+            putchar('\n');
+        }
+
+        free(qfamprops);
+    }
+    
     /*
     VkPhysicalDevice physdev;
     if (vkEnumeratePhysicalDevices(instance, 1, &physdev) != VK_SUCCESS) ABRT();
@@ -146,7 +186,13 @@ int main(void)
         glfwPollEvents();
     }
     */
-    
+
+    vkDestroyInstance(instance, NULL);
     glfwTerminate();
     return 0;
+
+    errorquit_selectphysdev:
+        vkDestroyInstance(instance, NULL);
+        glfwTerminate();
+    return 1;
 }
