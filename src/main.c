@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <limits.h>
 
 #define VK_USE_PLATFORM_WAYLAND_KHR
 #include <vk_platform.h>
@@ -177,6 +178,7 @@ int main(void)
 
     // =========================================
 
+    glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     GLFWwindow *w;
     if (!(w = glfwCreateWindow(800, 600, "Vulkan Test", NULL, NULL))) ABRT();
@@ -329,6 +331,94 @@ int main(void)
 
     // =========================================
 
+    VkFenceCreateInfo fencecinfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT
+    };
+    VkFence drawfence;
+    if (vkCreateFence(dev, &fencecinfo, NULL, &drawfence) != VK_SUCCESS)
+    { puts("failed creating draw fence"); goto errorquit_aftercreateswapchain; }
+
+    VkSemaphoreCreateInfo semcinfo = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+    VkSemaphore rsemaphore;
+    if (vkCreateSemaphore(dev, &semcinfo, NULL, &rsemaphore) != VK_SUCCESS)
+    { puts("failed creating semaphore for rendering"); goto errorquit_aftercreatefence; }
+
+    VkSemaphore psemaphore;
+    if (vkCreateSemaphore(dev, &semcinfo, NULL, &psemaphore) != VK_SUCCESS)
+    { puts("failed creating semaphore for presentation"); goto errorquit_aftercreatersem; }
+
+    // =========================================
+
+    VkCommandPoolCreateInfo cmdpoolcinfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = qfamindex
+    };
+    VkCommandPool cmdpool;
+    if (vkCreateCommandPool(dev, &cmdpoolcinfo, NULL, &cmdpool) != VK_SUCCESS)
+    { puts("error creating command pool"); goto errorquit_aftercreatepsem; }
+
+    VkCommandBufferAllocateInfo buffallocinfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = cmdpool,
+        .commandBufferCount = 1,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY
+    };
+    VkCommandBuffer cmdbuff;
+    if (vkAllocateCommandBuffers(dev, &buffallocinfo, &cmdbuff) != VK_SUCCESS)
+    { puts("failed allocating command buffer"); goto errorquit_aftercreatecmdpool; }
+
+    
+
+    // =========================================
+    
+    #if 0
+
+    /*
+    VkSubmitInfo2 subinf = 
+    {
+       .
+    }
+    vkQueueSubmit2();
+    */
+
+    while (!glfwWindowShouldClose(w))
+    {
+        if (vkWaitForFences(dev, 1, &drawfence, VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+        { puts("failed waiting for queue fence"); break; }
+
+        uint32_t imgindex;
+        vkAcquireNextImageKHR(dev, swapchain, UINT64_MAX, rsemaphore, NULL, &imgindex);
+    }
+
+    vkDeviceWaitIdle(dev);
+
+    //VkImage img;
+    //vkGetSwapchainImagesKHR()
+    
+    
+    /*
+    VkImageViewCreateInfo cinfos =
+    {
+        .format
+    }
+    vkCreateImageView()
+    */
+
+    #endif
+    
+    // =========================================
+
+    puts("program finished successfully");
+
+    vkDestroyCommandPool(dev, cmdpool, NULL);
+    vkDestroySemaphore(dev, psemaphore, NULL);
+    vkDestroySemaphore(dev, rsemaphore, NULL);
+    vkDestroyFence(dev, drawfence, NULL);
     vkDestroySwapchainKHR(dev, swapchain, NULL);
     vkDestroySurfaceKHR(instance, surface, NULL);
     vkDestroyDevice(dev, NULL);
@@ -336,6 +426,14 @@ int main(void)
     glfwTerminate();
     return 0;
 
+    errorquit_aftercreatecmdpool:
+        vkDestroyCommandPool(dev, cmdpool, NULL);
+    errorquit_aftercreatepsem:
+        vkDestroySemaphore(dev, psemaphore, NULL);
+    errorquit_aftercreatersem:
+        vkDestroySemaphore(dev, rsemaphore, NULL);
+    errorquit_aftercreatefence:
+        vkDestroyFence(dev, drawfence, NULL);
     errorquit_aftercreateswapchain:
         vkDestroySwapchainKHR(dev, swapchain, NULL);
     errorquit_aftercrsurface:
