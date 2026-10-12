@@ -154,7 +154,7 @@ int main(void)
     {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = NULL,
-        .flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
+        .flags = 0,
 
         .queueCount = 1,
         .queueFamilyIndex = qfamindex,
@@ -289,6 +289,12 @@ int main(void)
     if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physdev, surface, &surfacecapab) != VK_SUCCESS)
     { puts("failed to get physical device surface capabilities"); goto errorquit_aftercrsurface; }
 
+    printf("Surface current extent size: %ux%u pixels. ", surfacecapab.currentExtent.width, surfacecapab.currentExtent.height);
+    if (!(~surfacecapab.currentExtent.width) && !(~surfacecapab.currentExtent.height)) puts("Using current extent width & height from GLFW.");
+    else if (!(~surfacecapab.currentExtent.width)) puts("Using current extent width from GLFW and height from surface capabilities.");
+    else if (!(~surfacecapab.currentExtent.height)) puts("Using current extent height from GLFW and width from surface capabilities.");
+    else puts("Using both width & height from surface capabilities.");
+
     VkSwapchainCreateInfoKHR swchaincinfo =
     {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -297,7 +303,7 @@ int main(void)
         .minImageCount = surfacecapab.minImageCount + 1,
         .imageFormat = surfacefmt.format,
         .imageColorSpace = surfacefmt.colorSpace,
-        .imageExtent = surfacecapab.currentExtent,
+        //.imageExtent = surfacecapab.currentExtent,
         .imageArrayLayers = 1,
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
@@ -307,6 +313,15 @@ int main(void)
         .clipped = VK_TRUE,
         .oldSwapchain = NULL
     };
+
+    int fbw, fbh;
+    glfwGetFramebufferSize(w, &fbw, &fbh);
+    VkExtent2D fbext =
+    {
+        .width = ~surfacecapab.currentExtent.width ? surfacecapab.currentExtent.width : fbw,
+        .height = ~surfacecapab.currentExtent.height ? surfacecapab.currentExtent.height : fbh
+    };
+    swchaincinfo.imageExtent = fbext;
     
     VkSwapchainKHR swapchain;
     if (vkCreateSwapchainKHR(dev, &swchaincinfo, NULL, &swapchain) != VK_SUCCESS)
