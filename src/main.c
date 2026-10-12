@@ -331,6 +331,35 @@ int main(void)
 
     // =========================================
 
+    uint32_t *shadersourcedata;
+    size_t shadersourcesize;
+    {
+        FILE *f = fopen("res/shader.spv", "rb");
+        if (!f) ABRT();
+
+        fseek(f, 0, SEEK_END);
+        shadersourcesize = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        shadersourcedata = aligned_alloc(4, shadersourcesize);
+        if (!shadersourcedata) ABRT();
+        
+        fread(shadersourcedata, 1, shadersourcesize, f);
+        
+        fclose(f);
+    }
+
+    VkShaderModuleCreateInfo shmodcinfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = shadersourcesize,
+        .pCode = shadersourcedata,
+    };
+    VkShaderModule *shmod;
+    if (vkCreateShaderModule(dev, &shmodcinfo, NULL, &shmod) != VK_SUCCESS) ABRT();
+
+    // =========================================
+
     VkFenceCreateInfo fencecinfo =
     {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -371,8 +400,6 @@ int main(void)
     VkCommandBuffer cmdbuff;
     if (vkAllocateCommandBuffers(dev, &buffallocinfo, &cmdbuff) != VK_SUCCESS)
     { puts("failed allocating command buffer"); goto errorquit_aftercreatecmdpool; }
-
-    
 
     // =========================================
     
