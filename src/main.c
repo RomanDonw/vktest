@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <limits.h>
 
-#define VK_USE_PLATFORM_WAYLAND_KHR
 #include <vk_platform.h>
 #include <glad/vulkan.h>
 
@@ -331,32 +330,138 @@ int main(void)
 
     // =========================================
 
-    uint32_t *shadersourcedata;
-    size_t shadersourcesize;
+    VkPipeline pipeline;
     {
-        FILE *f = fopen("res/shader.spv", "rb");
-        if (!f) ABRT();
+        uint32_t *shadersourcedata;
+        size_t shadersourcesize;
+        {
+            FILE *f = fopen("res/shader.spv", "rb");
+            if (!f) ABRT();
 
-        fseek(f, 0, SEEK_END);
-        shadersourcesize = ftell(f);
-        fseek(f, 0, SEEK_SET);
+            fseek(f, 0, SEEK_END);
+            shadersourcesize = ftell(f);
+            fseek(f, 0, SEEK_SET);
 
-        shadersourcedata = aligned_alloc(4, shadersourcesize);
-        if (!shadersourcedata) ABRT();
+            shadersourcedata = malloc(shadersourcesize);
+            if (!shadersourcedata) ABRT();
+            
+            fread(shadersourcedata, 1, shadersourcesize, f);
+            
+            fclose(f);
+        }
+
+        VkShaderModuleCreateInfo shmodcinfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = shadersourcesize,
+            .pCode = shadersourcedata,
+        };
+        VkShaderModule shmod;
+        if (vkCreateShaderModule(dev, &shmodcinfo, NULL, &shmod) != VK_SUCCESS) ABRT();
+        free(shadersourcedata);
         
-        fread(shadersourcedata, 1, shadersourcesize, f);
-        
-        fclose(f);
+        // =========================================
+
+        VkPipelineShaderStageCreateInfo shstageinfos[] =
+        {
+            {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                .stage = VK_SHADER_STAGE_VERTEX_BIT,
+                .module = shmod,
+                .pName = "vertMain"
+            },
+            {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+                .module = shmod,
+                .pName = "fragMain"
+            }
+        };
+
+        VkDynamicState dstates[] = { VK_DYNAMIC_STATE_VIEWPORT };
+        VkPipelineDynamicStateCreateInfo dcinfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+            .dynamicStateCount = sizeof(dstates) / sizeof(VkDynamicState),
+            .pDynamicStates = dstates
+        };
+
+        VkPipelineVertexInputStateCreateInfo vincinfo =
+        { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+
+        VkPipelineInputAssemblyStateCreateInfo inasmcinfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+            .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
+        };
+
+        VkViewport viewport =
+        {
+            .x = 0,
+            .y = 0,
+            .width = fbext.width,
+            .height = fbext.height,
+            .minDepth = 0,
+            .maxDepth = 1
+        };
+        VkPipelineViewportStateCreateInfo vstatecinfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+            
+            .viewportCount = 1,
+            .pViewports = &viewport,
+
+            .scissorCount = 0,
+            .pScissors = NULL,
+        };
+
+        VkPipelineRasterizationStateCreateInfo raststatecinfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+            .depthClampEnable = VK_FALSE,
+            .rasterizerDiscardEnable = VK_FALSE,
+            .polygonMode = VK_POLYGON_MODE_FILL,
+            .cullMode = VK_CULL_MODE_BACK_BIT,
+            .frontFace = VK_FRONT_FACE_CLOCKWISE,
+            .depthBiasEnable = VK_FALSE,
+            .lineWidth = 1
+        };
+
+        VkPipelineLayoutCreateInfo layoutcinfo = 
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            .setLayoutCount = 0,
+            .pushConstantRangeCount = 0,
+        };
+        VkPipelineLayout layout;
+        if (vkCreatePipelineLayout(dev, &layoutcinfo, NULL, &layout) != VK_TRUE) ABRT();
+
+        VkPipelineRenderingCreateInfo rendcinfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+            .colorAttachmentCount = 1,
+            .pColorAttachmentFormats = &surfacefmt.format
+        };
+
+        VkGraphicsPipelineCreateInfo pcinfo = 
+        {
+            .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+
+            .stageCount = 1,
+            .pStages = shstageinfos,
+            
+            .pVertexInputState = &vincinfo,
+            .pInputAssemblyState = &inasmcinfo,
+            .pViewportState = &vstatecinfo,
+            .pRasterizationState = &raststatecinfo,
+            .pMultisampleState = NULL,
+            .pColorBlendState = NULL,
+            .pDynamicState = &dcinfo,
+            .layout = layout,
+            .renderPass = NULL
+        };
+        vkCreateGraphicsPipelines(dev, NULL, 1, &pcinfo, NULL, &pipeline);
     }
-
-    VkShaderModuleCreateInfo shmodcinfo =
-    {
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = shadersourcesize,
-        .pCode = shadersourcedata,
-    };
-    VkShaderModule *shmod;
-    if (vkCreateShaderModule(dev, &shmodcinfo, NULL, &shmod) != VK_SUCCESS) ABRT();
 
     // =========================================
 
